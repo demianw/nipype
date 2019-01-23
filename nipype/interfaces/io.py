@@ -388,6 +388,8 @@ class S3DataSinkInputSpec(DynamicTraitedSpec, BaseInterfaceInputSpec):
                        desc='Use anonymous connection to s3')
     bucket = traits.Str(mandatory=True,
                         desc='Amazon S3 bucket where your data is stored')
+    validate_bucket = traits.Bool(mandatory=False, usedefault=True,
+                                  desc='Validate existence of the bucket.')
     bucket_path = traits.Str('', usedefault=True,
                              desc='Location within your bucket to store '
                              'data.')
@@ -449,7 +451,8 @@ class S3DataSink(DataSink):
 
         else:
             conn = S3Connection(anon=self.inputs.anon)
-        bkt = conn.get_bucket(self.inputs.bucket)
+        bkt = conn.get_bucket(self.inputs.bucket,
+                              validate=self.inputs.validate_bucket)
         s3paths = []
 
         for path in paths:
@@ -577,8 +580,8 @@ class S3DataGrabber(IOBase):
         outputs = {}
         # get list of all files in s3 bucket
         conn = boto.connect_s3(anon=self.inputs.anon)
-        bkt = conn.get_bucket(self.inputs.bucket)
-        bkt_files = list(k.key for k in bkt.list())
+        bkt = conn.get_bucket(self.inputs.bucket, validate=self.inputs.validate_bucket)
+        bkt_files = list(k.key for k in bkt.list(self.inputs.bucket_path))
 
         # keys are outfields, args are template args for the outfield
         for key, args in self.inputs.template_args.items():
